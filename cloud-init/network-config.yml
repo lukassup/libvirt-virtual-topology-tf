@@ -1,0 +1,21 @@
+version: 2
+ethernets:
+  eth0:
+    set-name: eth0
+    dhcp4: true
+    match:
+      macaddress: '${mgmt_mac}'
+%{ if network ~}
+  swp1:
+    set-name: swp1
+    match:
+      name: ens16
+  swp2:
+    set-name: swp2
+    match:
+      name: ens17
+vrfs:
+  vrf-main:
+    table: 1000
+    interfaces: [swp1, swp2]
+%{ endif ~}

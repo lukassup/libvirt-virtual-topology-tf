@@ -1,0 +1,48 @@
+#cloud-config
+users:
+  - name: "${user}"
+    groups: [adm, audio, cdrom, dialout, dip, floppy, plugdev, sudo, video]
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - "${ssh_authorized_key}"
+package_update: true
+packages:
+- lldpd
+- frr
+%{ if network ~}
+runcmd:
+- netplan apply
+- sysctl -w net.ipv4.ip_forward=1
+- sysctl -w net.ipv6.conf.default.forwarding=1
+- sysctl -w net.ipv6.conf.all.forwarding=1
+- systemctl enable lldpd.service
+- systemctl start lldpd.service
+- ip address add ${router_id}/32 dev vrf-main
+- sed -i -e's/^bgpd=no/bgpd=yes/' -e 's/^bfdd=no/bfdd=yes/' -e 's/^#frr_profile="datacenter"/frr_profile="datacenter"/' /etc/frr/daemons
+- systemctl restart frr.service
+write_files:
+- content: |
+    net.ipv4.ip_forward=1
+    net.ipv6.conf.default.forwarding=1
+    net.ipv6.conf.all.forwarding=1
+  path: /etc/sysctl.d/30-ipforward.conf
+- content: |
+    log syslog informational
+    route-map REDISTRIBUTE permit 10
+      match interface vrf-main
+    
+    router bgp ${bgp_as} vrf vrf-main
+      bgp router-id ${router_id}
+      bgp bestpath as-path multipath-relax
+      neighbor fabric peer-group
+      neighbor fabric remote-as external
+      neighbor fabric bfd
+      neighbor swp1 interface peer-group fabric
+      neighbor swp2 interface peer-group fabric
+      address-family ipv4 unicast
+        neighbor fabric activate
+        redistribute connected route-map REDISTRIBUTE
+      exit-address-family
+  path: /etc/frr/frr.conf
+%{ endif ~}
