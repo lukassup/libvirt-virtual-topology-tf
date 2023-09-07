@@ -15,7 +15,6 @@
       <interface type='udp'>
         <model type='virtio'/>
         <address type='pci' domain='0x0000' bus='0x00' slot='0x10' function='0x0'/>
-        <mac address='52:54:00:ee:ee:05'/>
         <source address='127.1.${topology_id}.1' port='10001'>
           <local address='127.1.${topology_id}.3' port='10001'/>
         </source>
@@ -24,7 +23,6 @@
       <interface type='udp'>
         <model type='virtio'/>
         <address type='pci' domain='0x0000' bus='0x00' slot='0x11' function='0x0'/>
-        <mac address='52:54:00:ee:ee:06'/>
         <source address='127.1.${topology_id}.2' port='10001'>
           <local address='127.1.${topology_id}.3' port='10002'/>
         </source>
