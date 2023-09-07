@@ -167,7 +167,11 @@ resource "libvirt_domain" "domain" {
   }
 }
 
+locals {
+  ssh_cmd = format("ssh%s", !var.libvirt_local ? " -J ${var.libvirt_host}" : "")
+}
+
 output "ssh_cmd" {
   value = { for name, domain in libvirt_domain.domain :
-  name => format("ssh -J %s %s@%s", var.libvirt_host, var.user, domain.network_interface[0].addresses[0]) }
+  name => format("%s %s@%s", local.ssh_cmd, var.user, domain.network_interface[0].addresses[0]) }
 }
