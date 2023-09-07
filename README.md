@@ -59,3 +59,33 @@ Destroy topology
 ```
 ./tf destroy
 ```
+
+
+### Remote libvirt
+
+Set `libvirt_local=false` and `libvirt_host` variables to 
+
+```sh
+cat > .auto.tfvars <<EOF
+libvirt_local=false
+libvirt_host="user@host.example.com"
+EOF
+```
+
+> NOTE: macOS needs `cdrtools` for cloudinit disk: `brew install cdrtools`
+
+### Multiple topology instances
+
+Create topology instances 1 & 2
+
+```sh
+./tf apply -var=topology_id=1 -state=topology1.tfstate
+./tf apply -var=topology_id=2 -state=topology2.tfstate
+```
+
+Destroy topology instances 1 & 2
+
+```sh
+./tf destroy -var=topology_id=1 -state=topology1.tfstate
+./tf destroy -var=topology_id=2 -state=topology2.tfstate
+```
