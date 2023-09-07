@@ -10,7 +10,7 @@ package_update: true
 packages:
 - lldpd
 - frr
-%{ if network ~}
+%{ if routing ~}
 runcmd:
 - netplan apply
 - sysctl -w net.ipv4.ip_forward=1

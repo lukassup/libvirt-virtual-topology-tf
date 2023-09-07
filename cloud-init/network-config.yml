@@ -5,7 +5,7 @@ ethernets:
     dhcp4: true
     match:
       macaddress: '${mgmt_mac}'
-%{ if network ~}
+%{ if routing ~}
   swp1:
     set-name: swp1
     match:

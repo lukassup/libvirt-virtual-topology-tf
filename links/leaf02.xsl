@@ -16,8 +16,8 @@
         <model type='virtio'/>
         <address type='pci' domain='0x0000' bus='0x00' slot='0x10' function='0x0'/>
         <mac address='52:54:00:ee:ee:03'/>
-        <source address='127.1.1.3' port='10002'>
-          <local address='127.1.1.2' port='10001'/>
+        <source address='127.1.${topology_id}.3' port='10002'>
+          <local address='127.1.${topology_id}.2' port='10001'/>
         </source>
       </interface>
 
@@ -25,8 +25,8 @@
         <model type='virtio'/>
         <address type='pci' domain='0x0000' bus='0x00' slot='0x11' function='0x0'/>
         <mac address='52:54:00:ee:ee:04'/>
-        <source address='127.1.1.4' port='10002'>
-          <local address='127.1.1.2' port='10002'/>
+        <source address='127.1.${topology_id}.4' port='10002'>
+          <local address='127.1.${topology_id}.2' port='10002'/>
         </source>
       </interface>
 

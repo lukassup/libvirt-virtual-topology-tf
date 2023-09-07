@@ -8,15 +8,33 @@ terraform {
   }
 }
 
+variable "topology_id" {
+  type    = number
+  default = 1
+}
+
+variable "libvirt_local" {
+  type    = bool
+  default = false
+}
+
+variable "libvirt_host" {
+  type    = string
+  default = null
+}
+
 variable "image_url" {
   type    = string
   default = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
 }
+
+# should be per-vm
 variable "vcpu" {
   type    = number
   default = 1
 }
 
+# should be per-vm
 variable "memory" {
   type    = number
   default = 512
@@ -27,9 +45,13 @@ variable "user" {
   default = "debian"
 }
 
-variable "network_cidr" {
+variable "topology_network_prefix" {
   type    = string
-  default = "172.31.255.0/24"
+  default = "172.31.0.0/16"
+}
+
+locals {
+  network_cidr = cidrsubnet(var.topology_network_prefix, 8, var.topology_id)
 }
 
 variable "loopback_cidr" {
@@ -54,14 +76,14 @@ variable "vms" {
 }
 
 provider "libvirt" {
-  uri = "qemu:///system"
+  uri = var.libvirt_local ? "qemu:///system" : "qemu+ssh://${var.libvirt_host}/system"
 }
 
 resource "libvirt_network" "mgmt_network" {
-  name      = "mgmt-net01"
-  bridge    = "virbr100"
+  name      = format("%02d-mgmt-network", var.topology_id)
+  bridge    = "virbr${100 + var.topology_id}"
   mode      = "nat"
-  addresses = [var.network_cidr]
+  addresses = [local.network_cidr]
   domain    = "kvm.local"
   autostart = true
   dhcp {
@@ -80,31 +102,31 @@ resource "libvirt_volume" "base" {
 
 resource "libvirt_volume" "vol" {
   for_each       = { for index, vm in var.vms : vm => index + 1 }
-  name           = "${each.key}.qcow2"
+  name           = format("%02d-%s.qcow2", var.topology_id, each.key)
   base_volume_id = libvirt_volume.base.id
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
   for_each  = { for index, vm in var.vms : vm => index + 1 }
-  name      = "${each.key}-cloudinit.iso"
+  name      = format("%02d-%s-cloudinit.iso", var.topology_id, each.key)
   meta_data = templatefile("${path.module}/cloud-init/meta-data.yml", {})
   user_data = templatefile("${path.module}/cloud-init/user-data.yml", {
     user               = var.user
     ssh_authorized_key = trimspace(file(pathexpand("~/.ssh/id_rsa.pub")))
-    network            = strcontains(each.key, "oob-") ? false : true
+    routing            = strcontains(each.key, "oob-") ? false : true
     # spines should have same BGP ASN
     bgp_as    = strcontains(each.key, "spine") ? var.bgp_asn : var.bgp_asn + each.value
     router_id = cidrhost(var.loopback_cidr, each.value)
   })
   network_config = templatefile("${path.module}/cloud-init/network-config.yml", {
-    mgmt_mac = format("52:54:00:00:00:%02X", each.value)
-    network  = strcontains(each.key, "oob-") ? false : true
+    mgmt_mac = format("52:54:00:00:%02X:%02X", var.topology_id, each.value)
+    routing  = strcontains(each.key, "oob-") ? false : true
   })
 }
 
-resource "libvirt_domain" "terraform_test" {
+resource "libvirt_domain" "domain" {
   for_each  = { for index, vm in var.vms : vm => index + 1 }
-  name      = each.key
+  name      = format("%02d-%s", var.topology_id, each.key)
   vcpu      = var.vcpu
   memory    = var.memory
   autostart = true
@@ -122,9 +144,9 @@ resource "libvirt_domain" "terraform_test" {
     network_id = libvirt_network.mgmt_network.id
     hostname   = each.key
     # NOTE: first subnet IP is reserved for libvirt network bridge
-    addresses = [cidrhost(var.network_cidr, each.value + 1)]
+    addresses = [cidrhost(local.network_cidr, each.value + 1)]
     # NOTE: MAC address must start from 01
-    mac            = format("52:54:00:00:00:%02X", each.value)
+    mac            = format("52:54:00:00:%02X:%02X", var.topology_id, each.value)
     wait_for_lease = true
   }
 
@@ -139,11 +161,13 @@ resource "libvirt_domain" "terraform_test" {
   }
 
   xml {
-    xslt = fileexists("${path.module}/links/${each.key}.xsl") ? file("${path.module}/links/${each.key}.xsl") : null
+    xslt = (fileexists("${path.module}/links/${each.key}.xsl")
+      ? templatefile("${path.module}/links/${each.key}.xsl", {topology_id = var.topology_id})
+      : null)
   }
 }
 
 output "ssh_cmd" {
-  value = { for name, domain in libvirt_domain.terraform_test :
-  name => format("ssh %s@%s", var.user, domain.network_interface[0].addresses[0]) }
+  value = { for name, domain in libvirt_domain.domain :
+  name => format("ssh -J %s %s@%s", var.libvirt_host, var.user, domain.network_interface[0].addresses[0]) }
 }
