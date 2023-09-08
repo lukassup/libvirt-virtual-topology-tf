@@ -5,9 +5,18 @@ terraform {
       source  = "dmacvicar/libvirt"
       version = "~> 0.7.1"
     }
+    external = {
+     source = "hashicorp/external"
+     version = "~> 2.3.1"
+    }
   }
 }
 
+
+variable "topology_file" {
+  type = string
+  default = "topology.dot"
+}
 variable "topology_id" {
   type    = number
   default = 1
@@ -28,18 +37,6 @@ variable "image_url" {
   default = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
 }
 
-# should be per-vm
-variable "vcpu" {
-  type    = number
-  default = 1
-}
-
-# should be per-vm
-variable "memory" {
-  type    = number
-  default = 512
-}
-
 variable "user" {
   type    = string
   default = "debian"
@@ -52,6 +49,7 @@ variable "topology_network_prefix" {
 
 locals {
   network_cidr = cidrsubnet(var.topology_network_prefix, 8, var.topology_id)
+  tunnel_cidr = cidrsubnet("127.1.0.0/16", 16, var.topology_id)
 }
 
 variable "loopback_cidr" {
@@ -62,17 +60,6 @@ variable "loopback_cidr" {
 variable "bgp_asn" {
   type    = number
   default = 64512
-}
-
-variable "vms" {
-  type = list(string)
-  default = [
-    "oob-mgmt-server",
-    "leaf01",
-    "leaf02",
-    "spine01",
-    "spine02",
-  ]
 }
 
 provider "libvirt" {
@@ -101,13 +88,13 @@ resource "libvirt_volume" "base" {
 }
 
 resource "libvirt_volume" "vol" {
-  for_each       = { for index, vm in var.vms : vm => index + 1 }
+  for_each       = { for host, i in local.hosts : host => i + 1 }
   name           = format("%02d-%s.qcow2", var.topology_id, each.key)
   base_volume_id = libvirt_volume.base.id
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
-  for_each  = { for index, vm in var.vms : vm => index + 1 }
+  for_each       = { for host, i in local.hosts : host => i + 1 }
   name      = format("%02d-%s-cloudinit.iso", var.topology_id, each.key)
   meta_data = templatefile("${path.module}/cloud-init/meta-data.yml", {})
   user_data = templatefile("${path.module}/cloud-init/user-data.yml", {
@@ -125,10 +112,10 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
 }
 
 resource "libvirt_domain" "domain" {
-  for_each  = { for index, vm in var.vms : vm => index + 1 }
+  for_each       = { for host, i in local.hosts : host => i + 1 }
   name      = format("%02d-%s", var.topology_id, each.key)
-  vcpu      = var.vcpu
-  memory    = var.memory
+  vcpu      = local.cpu[each.key]
+  memory    = local.memory[each.key]
   autostart = true
   cloudinit = libvirt_cloudinit_disk.cloud_init[each.key].id
 
@@ -162,8 +149,8 @@ resource "libvirt_domain" "domain" {
 
   xml {
     xslt = (fileexists("${path.module}/links/${each.key}.xsl")
-      ? templatefile("${path.module}/links/${each.key}.xsl", {topology_id = var.topology_id})
-      : null)
+     ? templatefile("${path.module}/links/${each.key}.xsl", {topology_id = var.topology_id})
+     : null)
   }
 }
 

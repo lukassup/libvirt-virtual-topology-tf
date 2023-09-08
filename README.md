@@ -2,7 +2,6 @@
 
 Some shell Terraform scipts to create a basic 2 leaf 2 spine topology from Debian Cloud machines.
 
-
 ```mermaid
 graph TD;
     internet --> eth0;
@@ -89,3 +88,17 @@ Destroy topology instances 1 & 2
 ./tf destroy -var=topology_id=1 -state=topology1.tfstate
 ./tf destroy -var=topology_id=2 -state=topology2.tfstate
 ```
+
+### CAVEATS
+
+- terraform-libvirt-provider does not implement UDP tunnel network device type
+  so we're adding it using XLST. On subsequent apply runs the provider tries to
+  remove those network devices as they're not defined in the resource.
+  tl;dr - XSLT bad, run `terraform apply` once
+
+### TODO
+
+- provided topology.dot file p2p device links (udp tunnels) should be
+  passed to terraform
+  a) parse topology.dot, import links into terraform, templated XSLT, run terraform
+  b) parse topology.dot, pre-generate XSLT files, run terraform

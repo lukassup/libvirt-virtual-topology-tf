@@ -1,0 +1,14 @@
+graph vx {
+  // hosts
+  "oob-mgmt-server"[memory=1024 cpu=2]
+  "leaf01"
+  "leaf02"
+  "spine01"
+  "spine02"
+
+  // links
+  "leaf01":"swp01" -- "spine01":"swp01"
+  "leaf01":"swp02" -- "spine02":"swp01"
+  "leaf02":"swp01" -- "spine01":"swp02"
+  "leaf02":"swp02" -- "spine02":"swp02"
+}
