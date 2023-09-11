@@ -16,10 +16,19 @@ graph TD;
 
 ### USAGE
 
+Convert topology.dot file to JSON
+
+```sh
+dot -Tdot_json topology.dot > topology.dot.json
+```
+
 Create topology
 
 ```
-./tf apply
+terraform apply
+# ...
+  Enter a value: yes
+# ...
 # wait a few seconds...
 ssh debian@172.31.255.3
 
@@ -56,9 +65,8 @@ rtt min/avg/max/mdev = 0.472/0.472/0.472/0.000 ms
 Destroy topology
 
 ```
-./tf destroy
+terraform destroy
 ```
-
 
 ### Remote libvirt
 
@@ -78,15 +86,15 @@ EOF
 Create topology instances 1 & 2
 
 ```sh
-./tf apply -var=topology_id=1 -state=topology1.tfstate
-./tf apply -var=topology_id=2 -state=topology2.tfstate
+terraform apply -var=topology_id=1 -state=topology1.tfstate
+terraform apply -var=topology_id=2 -state=topology2.tfstate
 ```
 
 Destroy topology instances 1 & 2
 
 ```sh
-./tf destroy -var=topology_id=1 -state=topology1.tfstate
-./tf destroy -var=topology_id=2 -state=topology2.tfstate
+terraform destroy -var=topology_id=1 -state=topology1.tfstate
+terraform destroy -var=topology_id=2 -state=topology2.tfstate
 ```
 
 ### CAVEATS
@@ -98,7 +106,7 @@ Destroy topology instances 1 & 2
 
 ### TODO
 
-- provided topology.dot file p2p device links (udp tunnels) should be
-  passed to terraform
-  a) parse topology.dot, import links into terraform, templated XSLT, run terraform
-  b) parse topology.dot, pre-generate XSLT files, run terraform
+- [x] Terraform should create p2p links from topology.dot via UDP tunnels
+- [ ] Terraform should setup udev rules for link names
+- [ ] Test using Cumulus VX image
+- [ ] Test more advanced case

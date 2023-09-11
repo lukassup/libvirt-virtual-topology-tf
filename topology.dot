@@ -1,6 +1,6 @@
 graph vx {
   // hosts
-  "oob-mgmt-server"[memory=1024 cpu=2]
+  "oob-mgmt-server"
   "leaf01"
   "leaf02"
   "spine01"

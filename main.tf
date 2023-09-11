@@ -5,18 +5,18 @@ terraform {
       source  = "dmacvicar/libvirt"
       version = "~> 0.7.1"
     }
-    external = {
-     source = "hashicorp/external"
-     version = "~> 2.3.1"
+    local = {
+      source = "hashicorp/local"
+      version = "~> 2.4.0"
     }
   }
 }
 
-
 variable "topology_file" {
   type = string
-  default = "topology.dot"
+  default = "topology.dot.json"
 }
+
 variable "topology_id" {
   type    = number
   default = 1
@@ -49,7 +49,7 @@ variable "topology_network_prefix" {
 
 locals {
   network_cidr = cidrsubnet(var.topology_network_prefix, 8, var.topology_id)
-  tunnel_cidr = cidrsubnet("127.1.0.0/16", 16, var.topology_id)
+  tunnel_cidr = cidrsubnet("127.1.0.0/16", 8, var.topology_id)
 }
 
 variable "loopback_cidr" {
@@ -114,8 +114,8 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
 resource "libvirt_domain" "domain" {
   for_each       = { for host, i in local.hosts : host => i + 1 }
   name      = format("%02d-%s", var.topology_id, each.key)
-  vcpu      = local.cpu[each.key]
-  memory    = local.memory[each.key]
+  vcpu      = local.host_params[each.key].cpu
+  memory    = local.host_params[each.key].memory
   autostart = true
   cloudinit = libvirt_cloudinit_disk.cloud_init[each.key].id
 
@@ -148,9 +148,10 @@ resource "libvirt_domain" "domain" {
   }
 
   xml {
-    xslt = (fileexists("${path.module}/links/${each.key}.xsl")
-     ? templatefile("${path.module}/links/${each.key}.xsl", {topology_id = var.topology_id})
-     : null)
+    xslt = (lookup(local.links, each.key, null) == null ? null : templatefile("${path.module}/link.xslt.tftpl", {
+      tunnel_cidr = local.tunnel_cidr
+      links = local.links[each.key]
+    }))
   }
 }
 

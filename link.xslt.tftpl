@@ -12,22 +12,16 @@
     <xsl:copy>
       <xsl:apply-templates select="node()|@*"/>
 
+%{ for interface_id, link in links ~}
       <interface type='udp'>
         <model type='virtio'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x10' function='0x0'/>
-        <source address='127.1.${topology_id}.3' port='10002'>
-          <local address='127.1.${topology_id}.2' port='10001'/>
+        <address type='pci' domain='0x0000' bus='0x00' slot='0x${format("%02X", 16 + interface_id)}' function='0x0'/>
+        <source address='${cidrhost(tunnel_cidr, link.dst_id)}' port='${10000 + link.link_id}'>
+          <local address='${cidrhost(tunnel_cidr, link.src_id)}' port='${10000 + link.link_id}'/>
         </source>
       </interface>
 
-      <interface type='udp'>
-        <model type='virtio'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x11' function='0x0'/>
-        <source address='127.1.${topology_id}.4' port='10002'>
-          <local address='127.1.${topology_id}.2' port='10002'/>
-        </source>
-      </interface>
-
+%{ endfor ~}
     </xsl:copy>
   </xsl:template>
 </xsl:stylesheet>

@@ -1,0 +1,63 @@
+{
+  "name": "vx",
+  "directed": false,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "oob-mgmt-server",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 1,
+      "name": "leaf01",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 2,
+      "name": "leaf02",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 3,
+      "name": "spine01",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 4,
+      "name": "spine02",
+      "label": "\\N"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 3,
+      "headport": "swp01",
+      "tailport": "swp01"
+    },
+    {
+      "_gvid": 1,
+      "tail": 1,
+      "head": 4,
+      "headport": "swp01",
+      "tailport": "swp02"
+    },
+    {
+      "_gvid": 2,
+      "tail": 2,
+      "head": 3,
+      "headport": "swp02",
+      "tailport": "swp01"
+    },
+    {
+      "_gvid": 3,
+      "tail": 2,
+      "head": 4,
+      "headport": "swp02",
+      "tailport": "swp02"
+    }
+  ]
+}
