@@ -8,10 +8,10 @@ data "local_file" "topology" {
 
 locals {
   # topology nodes
-  topology_objects = jsondecode(data.local_file.topology.content).objects
-  hosts            = { for o in local.topology_objects : (o.name) => o._gvid }
-  hosts_           = { for o in local.topology_objects : (o._gvid) => o.name }
-  host_params = { for o in local.topology_objects :
+  topology = jsondecode(data.local_file.topology.content)
+  hosts    = { for o in local.topology.objects : (o.name) => o._gvid }
+  hosts_   = { for o in local.topology.objects : (o._gvid) => o.name }
+  host_params = { for o in local.topology.objects :
     (o.name) => {
       id = o._gvid
       # default resources
@@ -21,10 +21,9 @@ locals {
   }
 
   # topology links
-  topology_edges = jsondecode(data.local_file.topology.content).edges
   links = merge(
     # forward links
-    { for o in local.topology_edges : (local.hosts_[o.head]) => {
+    { for o in local.topology.edges : (local.hosts_[o.head]) => {
       link_id  = o._gvid
       src_id   = o.head
       dst_id   = o.tail
@@ -33,7 +32,7 @@ locals {
       dst_host = local.hosts_[o.tail]
     }... },
     # reverse links
-    { for o in local.topology_edges : (local.hosts_[o.tail]) => {
+    { for o in local.topology.edges : (local.hosts_[o.tail]) => {
       link_id  = o._gvid
       src_id   = o.tail
       dst_id   = o.head
