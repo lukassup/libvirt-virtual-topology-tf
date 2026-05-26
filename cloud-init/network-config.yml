@@ -5,17 +5,16 @@ ethernets:
     dhcp4: true
     match:
       macaddress: '${mgmt_mac}'
-%{ if routing ~}
-  swp1:
-    set-name: swp1
+%{ for name, mac in switch_ports ~}
+  ${name}:
+    set-name: '${name}'
+    dhcp4: false
     match:
-      name: ens16
-  swp2:
-    set-name: swp2
-    match:
-      name: ens17
+      macaddress: '${mac}'
+%{ endfor ~}
+%{ if switch_ports != {} ~}
 vrfs:
   vrf-main:
     table: 1000
-    interfaces: [swp1, swp2]
+    interfaces: ${jsonencode([for name, _ in switch_ports: name])}
 %{ endif ~}

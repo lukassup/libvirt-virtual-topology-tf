@@ -1,0 +1,15 @@
+[tools]
+opentofu = "1.12"
+
+[shell_alias]
+terraform = "tofu"
+
+[tasks.apply]
+run = "tofu apply -auto-approve"
+
+[tasks.destroy]
+run = "tofu destroy -auto-approve"
+
+[tasks.recreate]
+run = [{ task = "apply" }]
+depends = [{ task = "destroy" }]

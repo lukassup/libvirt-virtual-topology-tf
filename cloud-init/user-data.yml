@@ -1,25 +1,30 @@
 #cloud-config
+chpasswd:
+  expire: false
+  users:
+  - {name: root, password: root, type: text}
+  - {name: "${user}", password: "${user}", type: text}
 users:
   - name: "${user}"
-    groups: [adm, audio, cdrom, dialout, dip, floppy, plugdev, sudo, video]
+    groups: [adm, plugdev, sudo]
     sudo: "ALL=(ALL) NOPASSWD:ALL"
     shell: /bin/bash
     ssh_authorized_keys:
       - "${ssh_authorized_key}"
 package_update: true
+%{ if switch_ports != {} ~}
+bootcmd:
+- netplan apply
 packages:
 - lldpd
 - frr
-%{ if routing ~}
 runcmd:
-- netplan apply
 - sysctl -w net.ipv4.ip_forward=1
 - sysctl -w net.ipv6.conf.default.forwarding=1
 - sysctl -w net.ipv6.conf.all.forwarding=1
-- systemctl enable lldpd.service
-- systemctl start lldpd.service
+- systemctl enable --now lldpd.service
 - ip address add ${router_id}/32 dev vrf-main
-- sed -i -e's/^bgpd=no/bgpd=yes/' -e 's/^bfdd=no/bfdd=yes/' -e 's/^#frr_profile="datacenter"/frr_profile="datacenter"/' /etc/frr/daemons
+- sed -i -e 's/^bgpd=no/bgpd=yes/' -e 's/^bfdd=no/bfdd=yes/' -e 's/^#frr_profile="datacenter"/frr_profile="datacenter"/' /etc/frr/daemons
 - systemctl restart frr.service
 write_files:
 - content: |
@@ -31,7 +36,6 @@ write_files:
     log syslog informational
     route-map REDISTRIBUTE permit 10
       match interface vrf-main
-    
     router bgp ${bgp_as} vrf vrf-main
       bgp router-id ${router_id}
       bgp bestpath as-path multipath-relax
