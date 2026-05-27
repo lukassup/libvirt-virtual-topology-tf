@@ -1,5 +1,7 @@
 version: 2
 ethernets:
+  lo:
+    addresses: ['127.0.0.1/8', '::1/128', '${router_id}/32']
   eth0:
     set-name: eth0
     dhcp4: true
@@ -12,9 +14,19 @@ ethernets:
     match:
       macaddress: '${mac}'
 %{ endfor ~}
+%{ if bridge_ports ~}
+bridges:
+  br0:
+    dhcp4: false
+    interfaces: []
+%{ endif ~}
 %{ if switch_ports != {} ~}
 vrfs:
   vrf-main:
     table: 1000
+%{ if bridge_ports ~}
+    interfaces: ${jsonencode(concat(["br0"], [for name, _ in switch_ports: name]))}
+%{ else ~}
     interfaces: ${jsonencode([for name, _ in switch_ports: name])}
+%{ endif ~}
 %{ endif ~}

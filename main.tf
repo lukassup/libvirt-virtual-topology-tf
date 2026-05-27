@@ -97,11 +97,9 @@ resource "libvirt_volume" "base" {
   name     = "debian13-latest.qcow2"
   pool     = "default"
   capacity = 20 * pow(2, 10)
-
   target = {
     format = { type = "qcow2" }
   }
-
   create = {
     content = { url = var.image_url }
   }
@@ -112,11 +110,9 @@ resource "libvirt_volume" "vol" {
   pool     = "default"
   name     = format("%02d-%s.qcow2", var.topology_id, each.key)
   capacity = pow(10, 9) * 20
-
   target = {
     format = { type = "qcow2" }
   }
-
   backing_store = {
     path   = libvirt_volume.base.id
     format = { type = "qcow2" }
@@ -142,6 +138,8 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
     switch_ports = { for interface_id, link in lookup(local.links, each.key, []) :
       "swp${interface_id}" => format("52:54:00:%02X:%02X:%02X", var.topology_id, each.value, interface_id + 1)
     }
+    router_id    = cidrhost(var.loopback_cidr, each.value)
+    bridge_ports = strcontains(each.key, "leaf")
   })
 }
 
