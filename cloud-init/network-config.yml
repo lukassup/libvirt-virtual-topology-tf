@@ -1,7 +1,5 @@
 version: 2
 ethernets:
-  lo:
-    addresses: ['127.0.0.1/8', '::1/128', '${router_id}/32']
   eth0:
     set-name: eth0
     dhcp4: true

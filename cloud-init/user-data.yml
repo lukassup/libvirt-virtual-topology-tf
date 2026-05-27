@@ -42,8 +42,9 @@ write_files:
       neighbor fabric peer-group
       neighbor fabric remote-as external
       neighbor fabric bfd
-      neighbor swp1 interface peer-group fabric
-      neighbor swp2 interface peer-group fabric
+      %{ for name, _ in switch_ports ~}
+      neighbor ${name} interface peer-group fabric
+      %{ endfor ~}
       address-family ipv4 unicast
         neighbor fabric activate
         redistribute connected route-map REDISTRIBUTE
