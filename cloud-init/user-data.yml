@@ -15,15 +15,15 @@ package_update: true
 %{ if switch_ports != {} ~}
 bootcmd:
 - netplan apply
+- ip address add ${router_id}/32 dev vrf-main
+- sysctl -w net.ipv4.ip_forward=1
+- sysctl -w net.ipv6.conf.default.forwarding=1
+- sysctl -w net.ipv6.conf.all.forwarding=1
 packages:
 - lldpd
 - frr
 runcmd:
-- sysctl -w net.ipv4.ip_forward=1
-- sysctl -w net.ipv6.conf.default.forwarding=1
-- sysctl -w net.ipv6.conf.all.forwarding=1
 - systemctl enable --now lldpd.service
-- ip address add ${router_id}/32 dev vrf-main
 - sed -i -e 's/^bgpd=no/bgpd=yes/' -e 's/^bfdd=no/bfdd=yes/' -e 's/^#frr_profile="datacenter"/frr_profile="datacenter"/' /etc/frr/daemons
 - systemctl restart frr.service
 write_files:
@@ -42,9 +42,9 @@ write_files:
       neighbor fabric peer-group
       neighbor fabric remote-as external
       neighbor fabric bfd
-      %{ for name, _ in switch_ports ~}
+      %{~ for name, _ in switch_ports ~}
       neighbor ${name} interface peer-group fabric
-      %{ endfor ~}
+      %{~ endfor ~}
       address-family ipv4 unicast
         neighbor fabric activate
         redistribute connected route-map REDISTRIBUTE

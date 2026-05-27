@@ -1,6 +1,6 @@
 # libvirt-network-topology-tf
 
-Some shell Terraform scipts to create a basic 2 leaf 2 spine topology from Debian Cloud machines.
+Some Terraform scipts to create a basic 2 leaf 2 spine topology from Debian Cloud machines.
 
 ```mermaid
 graph TD;
@@ -25,31 +25,30 @@ dot -Tdot_json topology.dot > topology.dot.json
 Create topology
 
 ```
-terraform apply
-# ...
-  Enter a value: yes
-# ...
+mise apply
 # wait a few seconds...
+
 ssh debian@172.31.255.3
 
 # view bgp routes
-debian@leaf01:~$ sudo vtysh -c 'show bgp vrf vrf-main ipv4 unicast'
-BGP table version is 5, local router ID is 10.0.0.2, vrf id 5
+debian@01-leaf01:~$ sudo vtysh -c 'show bgp vrf vrf-main ipv4 unicast'
+BGP table version is 4, local router ID is 10.0.0.2, vrf id 6
 Default local pref 100, local AS 64514
-Status codes:  s suppressed, d damped, h history, * valid, > best, = multipath,
+Status codes:  s suppressed, d damped, h history, u unsorted, * valid, > best, = multipath,
                i internal, r RIB-failure, S Stale, R Removed
 Nexthop codes: @NNN nexthop's vrf id, < announce-nh-self
 Origin codes:  i - IGP, e - EGP, ? - incomplete
 RPKI validation codes: V valid, I invalid, N Not found
 
-   Network          Next Hop            Metric LocPrf Weight Path
-*> 10.0.0.2/32      0.0.0.0(leaf01)          0         32768 ?
-*= 10.0.0.3/32      swp2                                   0 64512 64515 ?
-*>                  swp1                                   0 64512 64515 ?
-*> 10.0.0.4/32      swp1                     0             0 64512 ?
-*> 10.0.0.5/32      swp2                     0             0 64512 ?
+     Network          Next Hop            Metric LocPrf Weight Path
+ *>  10.0.0.2/32      0.0.0.0(01-leaf01)
+                                             0         32768 ?
+ *>  10.0.0.3/32      swp0                                   0 64512 64515 ?
+ *=                   swp1                                   0 64512 64515 ?
+ *>  10.0.0.4/32      swp0                     0             0 64512 ?
+ *>  10.0.0.5/32      swp1                     0             0 64512 ?
 
-Displayed  4 routes and 5 total paths
+Displayed 4 routes and 5 total paths
 
 # verify connectivity between leaf01 & leaf02
 debian@leaf01:~$ sudo ip vrf exec vrf-main ping -c1 10.0.0.3
@@ -96,17 +95,3 @@ Destroy topology instances 1 & 2
 terraform destroy -var=topology_id=1 -state=topology1.tfstate
 terraform destroy -var=topology_id=2 -state=topology2.tfstate
 ```
-
-### CAVEATS
-
-- terraform-libvirt-provider does not implement UDP tunnel network device type
-  so we're adding it using XLST. On subsequent apply runs the provider tries to
-  remove those network devices as they're not defined in the resource.
-  tl;dr - XSLT bad, run `terraform apply` once
-
-### TODO
-
-- [x] Terraform should create p2p links from topology.dot via UDP tunnels
-- [ ] Terraform should setup udev rules for link names
-- [ ] Test using Cumulus VX image
-- [ ] Test more advanced case
