@@ -156,7 +156,7 @@ resource "libvirt_volume" "cloud_init" {
   }
 }
 
-resource "libvirt_domain" "domain" {
+resource "libvirt_domain" "this" {
   for_each  = { for host, i in local.hosts : host => i + 1 }
   name      = format("%02d-%s", var.topology_id, each.key)
   autostart = true
@@ -213,7 +213,8 @@ resource "libvirt_domain" "domain" {
     ],
     interfaces = concat([
       {
-        type = "network"
+        type        = "network"
+        wait_for_ip = {}
         source = {
           network = {
             network = libvirt_network.mgmt_network.name
@@ -255,13 +256,17 @@ resource "libvirt_domain" "domain" {
   }
 }
 
+data "libvirt_domain_interface_addresses" "this" {
+  for_each = libvirt_domain.this
+  domain   = each.value.uuid
+}
+
 locals {
   ssh_cmd = format("ssh%s", !var.libvirt_local ? " -J ${var.libvirt_host}" : "")
 }
 
 output "ssh_cmd" {
-  value = { for name, domain in libvirt_domain.domain :
-    name => format("%s %s@%s", local.ssh_cmd, var.user, "none")
-    # name => format("%s %s@%s", local.ssh_cmd, var.user, domain.network_interface[0].addresses[0])
+  value = { for name, domain in data.libvirt_domain_interface_addresses.this :
+    name => format("%s %s@%s", local.ssh_cmd, var.user, domain.interfaces[0].addrs[0].addr)
   }
 }
